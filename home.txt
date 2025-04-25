@@ -1,4 +1,11 @@
 this is my first file.
 learning GitHub.
+git status
 git diff
 git add .
+git add filename.fileType
+git commit
+git push
+git clone githubLink(repository)
+
+
