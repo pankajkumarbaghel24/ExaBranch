@@ -1,3 +1,4 @@
 this is my first file.
 learning GitHub.
 git diff
+git add .
