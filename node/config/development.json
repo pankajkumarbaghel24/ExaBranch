@@ -1,0 +1,9 @@
+{
+    "name": "My Express App - Development",
+    "db": {
+        "host": "localhost",
+        "user": "root",
+        "password": "aruna@1921",
+        "database": "network"
+    }
+}
