@@ -1,68 +1,41 @@
 const express =require('express');
 const Joi =require('joi')
-const route=express.Router();
+const router=express.Router();
 const mysql=require('../mysql')
 
 
 
-route.get('/device',(req,res)=>{
+router.get('/',(req,res)=>{
     var query="SELECT * from device_info ";
-    var id=req.params.id;
+    //var id=req.params.id;
 
-    mysql.exec(query,[id],function(err,result){
-        if(err)
-            return res.status(404).json(err);
-        if(result.length==0){
-            return res.status(404).send("data not found");
-        }
-        return res.json(result);
+    mysql.execute(query).then(result=>{
+        console.log("device Information",result[0]);
+        return res.json(result[0]);
+    }).catch(error=>{
+        console.log("device Information",error);
+        return res.status(404).send("data not found");
     })
 });
 
 
-route.get('/:id',(req,res)=>{
+router.get('/:id',(req,res)=>{
    
     var query="SELECT * from device_info WHERE id=?";
     var id=req.params.id;
 
-    mysql.exec(query,[id],function(err,result){
-        if(err)
-            return res.status(404).json(err);
-        if(result.length==0){
-            return res.status(404).send("data not found");
-        }
-        return res.json(result);
-    })
+    mysql.query(query,[id]).then((result)=>{
+        console.log(result[0]);
+        return res.json(result[0]);
+    }).catch((error)=>{
+        return res.status(404).send("Device Group Not Found");
+    });
 });
 
 
 
-// route.post('/', (req, res) => {
-//     const { error } = validatedevice(req.body);
-//     if (error) {
-//         return res.status(404).send(error.details[0].message); // ✅ Return to prevent further execution
-//     }
 
-//     var values = req.body;
-//     var query = "INSERT INTO device_info SET ?";
-    
-//     mysql.exec(query, values, function (err, data) {
-//         if (err) { 
-//             return res.status(404).send('error'); // ✅ Return to stop execution
-//         }
-
-//         if (data.affectedRows < 1) {
-//             return res.status(404).send('error'); // ✅ Return to prevent multiple sends
-//         }
-
-//         return res.json({
-//             id: data.insertId
-//         });
-//     });
-// });
-
-
-route.post('/', (req, res) => {
+router.post('/', (req, res) => {
     const { error } = validatedevice(req.body);
     if (error) {
         return res.status(400).send(error.details[0].message); // 400 = Bad Request
@@ -71,42 +44,53 @@ route.post('/', (req, res) => {
     const values = req.body;
     const query = "INSERT INTO device_info SET ?";
 
-    mysql.exec(query, values, function (err, data) {
-        if (err) { 
-            console.error("MySQL Error:", err);
-            return res.status(500).send('Database error'); // 500 = Server Error
-        }
-
-        if (data.affectedRows < 1) {
-            return res.status(500).send('Insert failed'); // Could also use 400
-        }
-
-        return res.json({
-            id: data.insertId
-        });
+    mysql.query(query,[values]).then(result=>{
+        console.log("result",result);
+        return res.json({id: result[0].insertId});
+    }).catch(error=>{
+        console.log("error",error);
+        return res.status(500).json("error",error);
     });
 });
 
 
 
-route.put('/:id',(req,res)=>{
-       
-    const { error } = validatedevice(req.body);// Object Destructor 
-
+router.put('/:id',(req,res)=>{
+    const { error } = validatedevice(req.body);
     if (error) {
-        res.status(404).send(error.details[0].message);
+        return res.status(400).send(error.details[0].message); // 400 = Bad Request
     }
     var id = req.params.id;
     var values = req.body;
     var query = "UPDATE device_info SET ? WHERE id = ? ";
 
     // Return Query Status
-    mysql.exec(query, [values, id], function (err, data) {
-        if (err) { if (err) return res.status(404).send('error'); };
-        if (data.affectedRows < 1) {
-            return res.status(404).send('error');
-        }
-        res.json({ success: "Data" });
+    // mysql.exec(query, [values, id], function (err, data) {
+    //     if (err) { if (err) return res.status(404).send('error'); };
+    //     if (data.affectedRows < 1) {
+    //         return res.status(404).send('error');
+    //     }
+    //     res.json({ success: "Data" });
+    // });
+
+    mysql.query(query,[values,id]).then(result=>{
+        return res.json({ success: "Data" });
+    }).catch(error=>{
+        console.log("error",error);
+        return res.status(500).json("error",error);
+    });
+});
+
+router.delete('/:id',(req,res)=>{
+    var id = req.params.id;
+
+    var query = "UPDATE device_info SET delete_flag='Y' WHERE id = ? ";
+
+    mysql.query(query,[id]).then(result=>{
+        return res.json({ success: "Data deleted" });
+    }).catch(error=>{
+        console.log("error",error);
+        return res.status(500).json("error",error);
     });
 });
 
@@ -129,7 +113,7 @@ function validatedevice(device) {
 
         status: Joi.string().valid('up', 'down').required(),
 
-        organation_serial_no: Joi.string().required(),
+        organization_serial_no: Joi.string().required(),
 
         snmp_enabled: Joi.string().valid('0', '1').required(),
         snmp_version: Joi.string().valid('1', '2c', '3').required(),
@@ -146,12 +130,12 @@ function validatedevice(device) {
 
         added_on: Joi.date().iso().required(),
         purchase_date: Joi.date().iso().required(),
-        fist_installation_date: Joi.date().iso().required(),
-        delete_flag: Joi.string().valid('Y', 'N')
+        first_installation_date: Joi.date().iso().required(),
+       // delete_flag: Joi.string().valid('Y', 'N')
     });
 
     return schema.validate(device);
 }
 
-module.exports =route;
+module.exports =router;
 
